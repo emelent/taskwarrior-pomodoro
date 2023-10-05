@@ -73,7 +73,7 @@ func main() {
 }
 
 func playSound(wg *sync.WaitGroup) {
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 3; i++ {
 		exec.Command("afplay", "/System/Library/Sounds/Submarine.aiff").Run()
 	}
 	wg.Done()
