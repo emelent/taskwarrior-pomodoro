@@ -56,7 +56,9 @@ func main() {
 		return
 	}
 
-	fmt.Printf("Starting '%s' for %d minutes\n", string(b), intervalInMins)
+	desc := string(b)
+	desc = desc[:len(desc)-1]
+	fmt.Printf("Starting '%s' for %d minutes\n", desc, intervalInMins)
 	waitDuration := time.Duration(intervalInMins) * time.Minute
 	fmt.Println("Stopping at: ", time.Now().Add(waitDuration).Format(time.Kitchen))
 	time.Sleep(waitDuration)
