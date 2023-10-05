@@ -14,16 +14,29 @@ import (
 )
 
 func main() {
-	intervalInMins, err := strconv.Atoi(textLinePrompt("For how many minutes?"))
-	if err != nil {
-		fmt.Println("error with interval: ", err)
-		return
+
+	args := os.Args[1:]
+	if len(args) < 1 {
+		fmt.Fprintln(os.Stderr, "No task ID passed")
+		os.Exit(1)
 	}
 
-	taskWarriorID := textLinePrompt("Which taskwarrior task ID?")
-	if taskWarriorID == "" {
-		fmt.Println("No task ID passed")
-		return
+	taskWarriorID := args[0]
+	var intervalInMins int
+	if len(args) < 2 {
+		interval, err := strconv.Atoi(textLinePrompt("For how many minutes?"))
+		intervalInMins = interval
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Invalid time interval: ", err)
+			os.Exit(2)
+		}
+	} else {
+		interval, err := strconv.Atoi(args[1])
+		intervalInMins = interval
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Invalid time interval: ", err)
+			os.Exit(2)
+		}
 	}
 
 	b, err := exec.Command("task", "_get", fmt.Sprintf("%s.description", taskWarriorID)).Output()
@@ -32,17 +45,9 @@ func main() {
 		return
 	}
 
-	ok, err := confirmPrompt(fmt.Sprintf("You want to run task: %s", string(b)))
-	if !ok || err != nil {
-		fmt.Println("Won't run: ", err)
-		return
-	}
-
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go handleInterrupt(sigs, taskWarriorID)
-
-	fmt.Println("Will start task: ", string(b))
 
 	err = exec.Command("task", "start", taskWarriorID).Run()
 	if err != nil {
@@ -51,13 +56,12 @@ func main() {
 		return
 	}
 
-	fmt.Printf("Will run for %d minutes... \n", intervalInMins)
-
+	fmt.Printf("Starting '%s' for %d minutes\n", string(b), intervalInMins)
 	waitDuration := time.Duration(intervalInMins) * time.Minute
-	fmt.Println("Will finish at: ", time.Now().Add(waitDuration).Format(time.Kitchen))
+	fmt.Println("Stopping at: ", time.Now().Add(waitDuration).Format(time.Kitchen))
 	time.Sleep(waitDuration)
 
-	fmt.Println("time's up!!")
+	fmt.Println("Pomodoro completed.")
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -68,7 +72,7 @@ func main() {
 
 func playSound(wg *sync.WaitGroup) {
 	for i := 0; i < 5; i++ {
-		exec.Command("afplay", "/System/Library/Sounds/Blow.aiff").Run()
+		exec.Command("afplay", "/System/Library/Sounds/Submarine.aiff").Run()
 	}
 	wg.Done()
 }
@@ -76,8 +80,7 @@ func playSound(wg *sync.WaitGroup) {
 func handleInterrupt(sigs chan os.Signal, taskID string) {
 	sig := <-sigs
 	fmt.Println()
-	fmt.Println("got interrupt: ", sig)
-	fmt.Println("beginning graceful shut down")
+	fmt.Println("Received interrupt: ", sig)
 	done(taskID)
 	os.Exit(1)
 }
